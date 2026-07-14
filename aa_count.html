@@ -1,0 +1,575 @@
+```xml
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EGY NIR — Associate Count Form</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg: #0a0e17;
+  --surface: #131a2b;
+  --surface2: #1a2332;
+  --border: #2a3a4d;
+  --accent: #00d4aa;
+  --accent-dim: #00a88a;
+  --text: #e8edf5;
+  --text-dim: #8b9bb4;
+  --danger: #ff4757;
+  --warning: #ffa502;
+  --success: #2ed573;
+  --radius: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed; inset: 0; background: rgba(10,14,23,0.92); z-index: 9999;
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+}
+.loading-overlay.hidden { display: none; }
+.spinner { width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 500; animation: slideIn 0.3s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.toast.info { background: #3742fa; }
+@keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+
+/* Header */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 16px 20px; position: sticky; top: 0; z-index: 100;
+}
+.header-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo i { font-size: 24px; color: var(--accent); }
+.logo h1 { font-size: 18px; font-weight: 700; }
+.logo span { font-size: 12px; color: var(--text-dim); display: block; }
+.header-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.sync-badge { font-size: 11px; color: var(--text-dim); background: var(--surface2); padding: 4px 10px; border-radius: 20px; }
+
+/* Controls */
+.controls {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 16px 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+}
+.control-group { display: flex; flex-direction: column; gap: 4px; }
+.control-group label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+select, input[type="number"] {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 10px 14px; border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s;
+}
+select:focus, input[type="number"]:focus { border-color: var(--accent); }
+
+/* Slot Selector */
+.slot-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.slot-btn {
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-dim); cursor: pointer;
+  font-size: 12px; font-weight: 500; transition: all 0.2s;
+}
+.slot-btn:hover { border-color: var(--accent); color: var(--text); }
+.slot-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+
+/* Category Tabs */
+.category-tabs {
+  display: flex; gap: 6px; padding: 12px 20px; overflow-x: auto;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.cat-tab {
+  padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  background: var(--surface2); color: var(--text-dim); cursor: pointer;
+  border: 1px solid transparent; white-space: nowrap; transition: all 0.2s;
+}
+.cat-tab:hover { color: var(--text); border-color: var(--border); }
+.cat-tab.active { background: var(--accent); color: #000; }
+.cat-tab .badge { background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 10px; margin-left: 4px; font-size: 10px; }
+
+/* Items Grid */
+.items-container { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.item-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; transition: border 0.2s;
+}
+.item-card:hover { border-color: var(--accent); }
+.item-card.has-value { border-left: 3px solid var(--accent); }
+.item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.item-name { font-size: 14px; font-weight: 600; }
+.item-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.item-sku { font-size: 11px; color: var(--accent); font-weight: 500; }
+.item-perunit { font-size: 10px; background: var(--surface2); padding: 2px 8px; border-radius: 10px; color: var(--text-dim); }
+
+/* Input Row for SPX5 (dual area) */
+.input-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.input-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 100px; }
+.input-group label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+.input-group input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 16px;
+  text-align: center; outline: none; transition: border 0.2s;
+}
+.input-group input:focus { border-color: var(--accent); }
+.input-group input::placeholder { color: var(--text-dim); opacity: 0.5; }
+.total-display {
+  background: var(--accent); color: #000; padding: 8px 14px; border-radius: 8px;
+  font-weight: 700; font-size: 14px; min-width: 80px; text-align: center;
+  display: flex; flex-direction: column; align-items: center;
+}
+.total-display span { font-size: 9px; font-weight: 600; opacity: 0.7; }
+
+/* Single input (SPX7/CAI6) */
+.single-input { max-width: 200px; }
+
+/* Submit Section */
+.submit-section {
+  position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--border);
+  padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;
+}
+.count-summary { font-size: 13px; color: var(--text-dim); }
+.count-summary strong { color: var(--accent); }
+.submit-btn {
+  background: var(--accent); color: #000; border: none; padding: 14px 32px;
+  border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+}
+.submit-btn:hover { background: var(--accent-dim); transform: translateY(-1px); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .input-row { flex-direction: column; gap: 8px; }
+  .controls { flex-direction: column; }
+  .header-top { flex-direction: column; align-items: flex-start; }
+  .slot-selector { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="color:var(--text-dim);font-size:14px;">Loading items...</div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<header class="header">
+  <div class="header-top">
+    <div class="logo">
+      <i class="fas fa-clipboard-list"></i>
+      <div>
+        <h1>EGY NIR Count</h1>
+        <span>Associate Inventory Form</span>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="sync-badge" id="syncBadge"><i class="fas fa-clock"></i> Not synced</span>
+    </div>
+  </div>
+</header>
+
+<section class="controls">
+  <div class="control-group">
+    <label><i class="fas fa-user"></i> Associate</label>
+    <select id="userSelect">
+      <option value="">Select your name...</option>
+      <option value="Marwan Amr">Marwan Amr</option>
+      <option value="Ibrahim Hamed">Ibrahim Hamed</option>
+      <option value="Associate 1">Associate 1</option>
+      <option value="Associate 2">Associate 2</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label><i class="fas fa-building"></i> Site</label>
+    <select id="siteSelect">
+      <option value="SPX5">SPX5</option>
+      <option value="SPX7">SPX7</option>
+      <option value="CAI6">CAI6</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label><i class="fas fa-calendar"></i> Date</label>
+    <select id="dateSelect"></select>
+  </div>
+  <div class="control-group" style="flex:1;min-width:280px;">
+    <label><i class="fas fa-clock"></i> Count Slot</label>
+    <div class="slot-selector" id="slotSelector">
+      <div class="slot-btn active" data-slot="morning_start">🌅 Morning Start (8 AM)</div>
+      <div class="slot-btn" data-slot="morning_end">🌤️ Morning End (6 PM)</div>
+      <div class="slot-btn" data-slot="evening_start">🌆 Evening Start (6:30 PM)</div>
+      <div class="slot-btn" data-slot="evening_end">🌙 Evening End (4:30 AM)</div>
+    </div>
+  </div>
+</section>
+
+<nav class="category-tabs" id="categoryTabs"></nav>
+
+<main class="items-container" id="itemsContainer">
+  <!-- Items rendered here -->
+</main>
+
+<footer class="submit-section">
+  <div class="count-summary">
+    <i class="fas fa-check-circle"></i> <strong id="filledCount">0</strong> / <span id="totalCount">0</span> items counted
+  </div>
+  <button class="submit-btn" id="submitBtn" disabled>
+    <i class="fas fa-paper-plane"></i> Submit Count
+  </button>
+</footer>
+
+<script>
+(function() {
+  // Supabase Config
+  var SUPABASE_URL = 'https://gpyhfyjcfhwgnufwwjlb.supabase.co';
+  var SUPABASE_KEY = '';
+// Load key from URL param or localStorage
+try { SUPABASE_KEY = localStorage.getItem('sb_key') || ''; } catch(e){}
+if (!SUPABASE_KEY) {
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('key')) {
+        SUPABASE_KEY = urlParams.get('key');
+        try { localStorage.setItem('sb_key', SUPABASE_KEY); } catch(e){}
+    }
+}
+if (!SUPABASE_KEY) {
+    SUPABASE_KEY = prompt('Enter your Supabase anon key (from Settings > API):');
+    if (SUPABASE_KEY) { try { localStorage.setItem('sb_key', SUPABASE_KEY); } catch(e){} }
+}
+  var headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+
+  // State
+  var allItems = [];
+  var activeCategory = 'all';
+  var selectedSlot = 'morning_start';
+  var categories = {};
+
+  // IP Restriction placeholder
+  var IP_CONFIG = { enabled: false, allowed: ['*'] };
+
+  // Helpers
+  function showLoading(show) {
+    document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+  }
+
+  function toast(msg, type) {
+    var container = document.getElementById('toastContainer');
+    var t = document.createElement('div');
+    t.className = 'toast ' + (type || 'info');
+    t.textContent = msg;
+    container.appendChild(t);
+    setTimeout(function() { t.remove(); }, 4000);
+  }
+
+  function updateSyncBadge() {
+    var badge = document.getElementById('syncBadge');
+    var now = new Date();
+    badge.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success)"></i> Synced ' + now.toLocaleTimeString();
+  }
+
+  function getToday() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  // Init date selector
+  function initDateSelect() {
+    var sel = document.getElementById('dateSelect');
+    var today = new Date();
+    for (var i = 0; i < 3; i++) {
+      var d = new Date(today);
+      d.setDate(d.getDate() - i);
+      var val = d.toISOString().split('T')[0];
+      var opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = i === 0 ? 'Today (' + val + ')' : val;
+      sel.appendChild(opt);
+    }
+  }
+
+  // Slot selector
+  document.getElementById('slotSelector').addEventListener('click', function(e) {
+    var btn = e.target.closest('.slot-btn');
+    if (!btn) return;
+    document.querySelectorAll('.slot-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedSlot = btn.dataset.slot;
+  });
+
+  // Fetch items
+  function fetchItems() {
+    showLoading(true);
+    fetch(SUPABASE_URL + '/rest/v1/items?select=*&order=category,name', { headers: headers })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        allItems = data || [];
+        buildCategories();
+        renderCategoryTabs();
+        renderItems();
+        showLoading(false);
+        updateSyncBadge();
+        document.getElementById('totalCount').textContent = allItems.length;
+      })
+      .catch(function(err) {
+        console.error(err);
+        showLoading(false);
+        toast('Failed to load items: ' + err.message, 'error');
+        // Try localStorage fallback
+        try {
+          var cached = localStorage.getItem('egy_items_cache');
+          if (cached) {
+            allItems = JSON.parse(cached);
+            buildCategories();
+            renderCategoryTabs();
+            renderItems();
+            document.getElementById('totalCount').textContent = allItems.length;
+            toast('Loaded from cache', 'info');
+          }
+        } catch(e) {}
+      });
+  }
+
+  function buildCategories() {
+    categories = {};
+    allItems.forEach(function(item) {
+      var cat = item.category || 'Other';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(item);
+    });
+    // Cache
+    try { localStorage.setItem('egy_items_cache', JSON.stringify(allItems)); } catch(e) {}
+  }
+
+  function renderCategoryTabs() {
+    var container = document.getElementById('categoryTabs');
+    var html = '<div class="cat-tab active" data-cat="all">All<span class="badge">' + allItems.length + '</span></div>';
+    Object.keys(categories).sort().forEach(function(cat) {
+      html += '<div class="cat-tab" data-cat="' + cat + '">' + cat + '<span class="badge">' + categories[cat].length + '</span></div>';
+    });
+    container.innerHTML = html;
+
+    container.addEventListener('click', function(e) {
+      var tab = e.target.closest('.cat-tab');
+      if (!tab) return;
+      container.querySelectorAll('.cat-tab').forEach(function(t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      activeCategory = tab.dataset.cat;
+      renderItems();
+    });
+  }
+
+  function renderItems() {
+    var site = document.getElementById('siteSelect').value;
+    var container = document.getElementById('itemsContainer');
+    var items = activeCategory === 'all' ? allItems : (categories[activeCategory] || []);
+    var html = '';
+
+    items.forEach(function(item) {
+      var hasValue = getInputValue(item.sku, 'main') || getInputValue(item.sku, 'cret');
+      html += '<div class="item-card' + (hasValue ? ' has-value' : '') + '" data-sku="' + item.sku + '">';
+      html += '<div class="item-header">';
+      html += '<div><div class="item-name">' + escHtml(item.name) + '</div>';
+      html += '<div class="item-meta"><span class="item-sku">' + item.sku + '</span> · ' + (item.category || '') + '</div></div>';
+      html += '<div class="item-perunit">' + (item.per_unit || 0) + ' units/pallet</div>';
+      html += '</div>';
+
+      if (site === 'SPX5') {
+        html += '<div class="input-row">';
+        html += '<div class="input-group"><label>🏭 Main Area</label>';
+        html += '<input type="number" min="0" step="1" placeholder="0" data-sku="' + item.sku + '" data-area="main" oninput="window.EGY.onInput(this)"></div>';
+        html += '<div class="input-group"><label>🔄 C-RET Area</label>';
+        html += '<input type="number" min="0" step="1" placeholder="0" data-sku="' + item.sku + '" data-area="cret" oninput="window.EGY.onInput(this)"></div>';
+        html += '<div class="total-display" id="total_' + item.sku + '"><span>TOTAL</span><span class="total-val">0</span></div>';
+        html += '</div>';
+      } else {
+        html += '<div class="input-row"><div class="input-group single-input"><label>📦 Pallets</label>';
+        html += '<input type="number" min="0" step="1" placeholder="0" data-sku="' + item.sku + '" data-area="main" oninput="window.EGY.onInput(this)"></div></div>';
+      }
+
+      html += '</div>';
+    });
+
+    container.innerHTML = html;
+    restoreValues();
+    updateFilledCount();
+  }
+
+  function escHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  // Value tracking in memory
+  var countValues = {};
+
+  function getStorageKey() {
+    var site = document.getElementById('siteSelect').value;
+    var date = document.getElementById('dateSelect').value;
+    return 'egy_counts_' + site + '_' + date + '_' + selectedSlot;
+  }
+
+  function saveValues() {
+    try { localStorage.setItem(getStorageKey(), JSON.stringify(countValues)); } catch(e) {}
+  }
+
+  function loadValues() {
+    try {
+      var saved = localStorage.getItem(getStorageKey());
+      countValues = saved ? JSON.parse(saved) : {};
+    } catch(e) { countValues = {}; }
+  }
+
+  function restoreValues() {
+    loadValues();
+    document.querySelectorAll('input[data-sku]').forEach(function(inp) {
+      var key = inp.dataset.sku + '_' + inp.dataset.area;
+      if (countValues[key]) inp.value = countValues[key];
+    });
+    // Update totals
+    allItems.forEach(function(item) {
+      updateTotal(item.sku);
+    });
+  }
+
+  function getInputValue(sku, area) {
+    return countValues[sku + '_' + area] || 0;
+  }
+
+  function updateTotal(sku) {
+    var totalEl = document.getElementById('total_' + sku);
+    if (!totalEl) return;
+    var main = parseInt(countValues[sku + '_main']) || 0;
+    var cret = parseInt(countValues[sku + '_cret']) || 0;
+    totalEl.querySelector('.total-val').textContent = main + cret;
+  }
+
+  window.EGY = {
+    onInput: function(inp) {
+      var key = inp.dataset.sku + '_' + inp.dataset.area;
+      countValues[key] = inp.value ? parseInt(inp.value) : 0;
+      saveValues();
+      updateTotal(inp.dataset.sku);
+      updateFilledCount();
+      // Add has-value class
+      var card = inp.closest('.item-card');
+      if (card) {
+        var hasVal = countValues[inp.dataset.sku + '_main'] || countValues[inp.dataset.sku + '_cret'];
+        card.classList.toggle('has-value', !!hasVal);
+      }
+    }
+  };
+
+  function updateFilledCount() {
+    var filled = 0;
+    allItems.forEach(function(item) {
+      if (countValues[item.sku + '_main'] || countValues[item.sku + '_cret']) filled++;
+    });
+    document.getElementById('filledCount').textContent = filled;
+    document.getElementById('submitBtn').disabled = filled === 0;
+  }
+
+  // Submit
+  document.getElementById('submitBtn').addEventListener('click', function() {
+    var user = document.getElementById('userSelect').value;
+    var site = document.getElementById('siteSelect').value;
+    var date = document.getElementById('dateSelect').value;
+
+    if (!user) { toast('Please select your name', 'error'); return; }
+    if (!date) { toast('Please select a date', 'error'); return; }
+
+    var rows = [];
+    allItems.forEach(function(item) {
+      var mainVal = parseInt(countValues[item.sku + '_main']) || 0;
+      var cretVal = parseInt(countValues[item.sku + '_cret']) || 0;
+      var perUnit = item.per_unit || 1;
+
+      if (site === 'SPX5') {
+        if (mainVal > 0) {
+          rows.push({
+            date: date, site: site, sku: item.sku,
+            count_pallets: mainVal, total_units: mainVal * perUnit,
+            combined_units: (mainVal + cretVal) * perUnit,
+            user_name: user, submitted_at: new Date().toISOString(),
+            count_slot: selectedSlot, area: 'main'
+          });
+        }
+        if (cretVal > 0) {
+          rows.push({
+            date: date, site: site, sku: item.sku,
+            count_pallets: cretVal, total_units: cretVal * perUnit,
+            combined_units: (mainVal + cretVal) * perUnit,
+            user_name: user, submitted_at: new Date().toISOString(),
+            count_slot: selectedSlot, area: 'c_ret'
+          });
+        }
+        // If both zero but user explicitly set 0
+        if (mainVal === 0 && cretVal === 0 && (countValues[item.sku + '_main'] !== undefined || countValues[item.sku + '_cret'] !== undefined)) {
+          // skip zeros unless user typed them
+        }
+      } else {
+        if (mainVal > 0) {
+          rows.push({
+            date: date, site: site, sku: item.sku,
+            count_pallets: mainVal, total_units: mainVal * perUnit,
+            combined_units: mainVal * perUnit,
+            user_name: user, submitted_at: new Date().toISOString(),
+            count_slot: selectedSlot, area: 'main'
+          });
+        }
+      }
+    });
+
+    if (rows.length === 0) { toast('No items to submit', 'error'); return; }
+
+    showLoading(true);
+    document.getElementById('submitBtn').disabled = true;
+
+    var submitHeaders = Object.assign({}, headers);
+    submitHeaders['Prefer'] = 'resolution=merge-duplicates,return=minimal';
+
+    fetch(SUPABASE_URL + '/rest/v1/daily_counts', {
+      method: 'POST',
+      headers: submitHeaders,
+      body: JSON.stringify(rows)
+    })
+    .then(function(res) {
+      if (!res.ok) return res.text().then(function(t) { throw new Error(t); });
+      showLoading(false);
+      toast('✅ Submitted ' + rows.length + ' records successfully!', 'success');
+      updateSyncBadge();
+      // Clear saved values
+      try { localStorage.removeItem(getStorageKey()); } catch(e) {}
+      countValues = {};
+      renderItems();
+    })
+    .catch(function(err) {
+      showLoading(false);
+      document.getElementById('submitBtn').disabled = false;
+      toast('❌ Submit failed: ' + err.message, 'error');
+      console.error(err);
+    });
+  });
+
+  // Site change re-renders
+  document.getElementById('siteSelect').addEventListener('change', function() {
+    loadValues();
+    renderItems();
+  });
+  document.getElementById('dateSelect').addEventListener('change', function() {
+    loadValues();
+    renderItems();
+  });
+
+  // Init
+  initDateSelect();
+  fetchItems();
+})();
+</script>
+</body>
+</html>
+```
